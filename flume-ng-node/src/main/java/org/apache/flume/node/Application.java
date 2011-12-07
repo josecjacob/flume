@@ -22,6 +22,7 @@ import org.apache.flume.lifecycle.LifecycleException;
 import org.apache.flume.lifecycle.LifecycleState;
 import org.apache.flume.node.nodemanager.DefaultLogicalNodeManager;
 import org.apache.flume.sink.AvroSink;
+import org.apache.flume.sink.AvroSplitterSink;
 import org.apache.flume.sink.DefaultSinkFactory;
 import org.apache.flume.sink.LoggerSink;
 import org.apache.flume.sink.NullSink;
@@ -39,133 +40,135 @@ import com.google.common.base.Preconditions;
 
 public class Application {
 
-  private static final Logger logger = LoggerFactory
-      .getLogger(Application.class);
+	private static final Logger logger = LoggerFactory
+			.getLogger(Application.class);
 
-  private String[] args;
-  private File configurationFile;
-  private String nodeName;
+	private String[] args;
+	private File configurationFile;
+	private String nodeName;
 
-  private SourceFactory sourceFactory;
-  private SinkFactory sinkFactory;
-  private ChannelFactory channelFactory;
+	private SourceFactory sourceFactory;
+	private SinkFactory sinkFactory;
+	private ChannelFactory channelFactory;
 
-  public static void main(String[] args) {
-    Application application = new Application();
+	public static void main(String[] args) {
+		Application application = new Application();
 
-    application.setArgs(args);
+		application.setArgs(args);
 
-    try {
-      application.loadPlugins();
+		try {
+			application.loadPlugins();
 
-      if (application.parseOptions()) {
-        application.run();
-      }
-    } catch (ParseException e) {
-      logger.error(e.getMessage());
-    } catch (Exception e) {
-      logger.error("A fatal error occurred while running. Exception follows.",
-          e);
-    }
-  }
+			if (application.parseOptions()) {
+				application.run();
+			}
+		} catch (ParseException e) {
+			logger.error(e.getMessage());
+		} catch (Exception e) {
+			logger.error(
+					"A fatal error occurred while running. Exception follows.",
+					e);
+		}
+	}
 
-  public Application() {
-    sourceFactory = new DefaultSourceFactory();
-    sinkFactory = new DefaultSinkFactory();
-    channelFactory = new DefaultChannelFactory();
-  }
+	public Application() {
+		sourceFactory = new DefaultSourceFactory();
+		sinkFactory = new DefaultSinkFactory();
+		channelFactory = new DefaultChannelFactory();
+	}
 
-  public void loadPlugins() {
-    channelFactory.register("memory", MemoryChannel.class);
-    channelFactory.register("jdbc", JdbcChannel.class);
+	public void loadPlugins() {
+		channelFactory.register("memory", MemoryChannel.class);
+		channelFactory.register("jdbc", JdbcChannel.class);
 
-    sourceFactory.register("seq", SequenceGeneratorSource.class);
-    sourceFactory.register("netcat", NetcatSource.class);
-    sourceFactory.register("exec", ExecSource.class);
-    sourceFactory.register("avro", AvroSource.class);
+		sourceFactory.register("seq", SequenceGeneratorSource.class);
+		sourceFactory.register("netcat", NetcatSource.class);
+		sourceFactory.register("exec", ExecSource.class);
+		sourceFactory.register("avro", AvroSource.class);
 
-    sinkFactory.register("null", NullSink.class);
-    sinkFactory.register("logger", LoggerSink.class);
-    sinkFactory.register("file-roll", RollingFileSink.class);
-    sinkFactory.register("hdfs", HDFSEventSink.class);
-    sinkFactory.register("avro", AvroSink.class);
-  }
+		sinkFactory.register("null", NullSink.class);
+		sinkFactory.register("logger", LoggerSink.class);
+		sinkFactory.register("file-roll", RollingFileSink.class);
+		sinkFactory.register("hdfs", HDFSEventSink.class);
+		sinkFactory.register("avro", AvroSink.class);
+		sinkFactory.register("avro-splitter", AvroSplitterSink.class);
+	}
 
-  public boolean parseOptions() throws ParseException {
-    Options options = new Options();
+	public boolean parseOptions() throws ParseException {
+		Options options = new Options();
 
-    Option option = new Option("n", "name", true, "the name of this node");
-    options.addOption(option);
+		Option option = new Option("n", "name", true, "the name of this node");
+		options.addOption(option);
 
-    option = new Option("f", "conf-file", true, "specify a conf file");
-    options.addOption(option);
+		option = new Option("f", "conf-file", true, "specify a conf file");
+		options.addOption(option);
 
-    option = new Option("h", "help", false, "display help text");
-    options.addOption(option);
+		option = new Option("h", "help", false, "display help text");
+		options.addOption(option);
 
-    CommandLineParser parser = new GnuParser();
-    CommandLine commandLine = parser.parse(options, args);
+		CommandLineParser parser = new GnuParser();
+		CommandLine commandLine = parser.parse(options, args);
 
-    if (commandLine.hasOption('f')) {
-      configurationFile = new File(commandLine.getOptionValue('f'));
-    }
+		if (commandLine.hasOption('f')) {
+			configurationFile = new File(commandLine.getOptionValue('f'));
+		}
 
-    if (commandLine.hasOption('n')) {
-      nodeName = commandLine.getOptionValue('n');
-    }
+		if (commandLine.hasOption('n')) {
+			nodeName = commandLine.getOptionValue('n');
+		}
 
-    if (commandLine.hasOption('h')) {
-      new HelpFormatter().printHelp("flume-ng node", options, true);
+		if (commandLine.hasOption('h')) {
+			new HelpFormatter().printHelp("flume-ng node", options, true);
 
-      return false;
-    }
+			return false;
+		}
 
-    return true;
-  }
+		return true;
+	}
 
-  public void run() throws LifecycleException, InterruptedException,
-      InstantiationException {
+	public void run() throws LifecycleException, InterruptedException,
+			InstantiationException {
 
-    final FlumeNode node = new FlumeNode();
-    DefaultLogicalNodeManager nodeManager = new DefaultLogicalNodeManager();
-    AbstractFileConfigurationProvider configurationProvider = new PropertiesFileConfigurationProvider();
+		final FlumeNode node = new FlumeNode();
+		DefaultLogicalNodeManager nodeManager = new DefaultLogicalNodeManager();
+		AbstractFileConfigurationProvider configurationProvider = new PropertiesFileConfigurationProvider();
 
-    configurationProvider.setChannelFactory(channelFactory);
-    configurationProvider.setSourceFactory(sourceFactory);
-    configurationProvider.setSinkFactory(sinkFactory);
+		configurationProvider.setChannelFactory(channelFactory);
+		configurationProvider.setSourceFactory(sourceFactory);
+		configurationProvider.setSinkFactory(sinkFactory);
 
-    configurationProvider.setNodeName(nodeName);
-    configurationProvider.setConfigurationAware(nodeManager);
-    configurationProvider.setFile(configurationFile);
+		configurationProvider.setNodeName(nodeName);
+		configurationProvider.setConfigurationAware(nodeManager);
+		configurationProvider.setFile(configurationFile);
 
-    Preconditions.checkState(configurationFile != null,
-        "Configuration file not specified");
-    Preconditions.checkState(nodeName != null, "Node name not specified");
+		Preconditions.checkState(configurationFile != null,
+				"Configuration file not specified");
+		Preconditions.checkState(nodeName != null, "Node name not specified");
 
-    node.setName(nodeName);
-    node.setNodeManager(nodeManager);
-    node.setConfigurationProvider(configurationProvider);
+		node.setName(nodeName);
+		node.setNodeManager(nodeManager);
+		node.setConfigurationProvider(configurationProvider);
 
-    Runtime.getRuntime().addShutdownHook(new Thread("node-shutdownHook") {
+		Runtime.getRuntime().addShutdownHook(new Thread("node-shutdownHook") {
 
-      @Override
-      public void run() {
-        node.stop();
-      }
+			@Override
+			public void run() {
+				node.stop();
+			}
 
-    });
+		});
 
-    node.start();
-    LifecycleController.waitForOneOf(node, LifecycleState.START_OR_ERROR);
-    LifecycleController.waitForOneOf(node, LifecycleState.STOP_OR_ERROR);
-  }
+		node.start();
+		LifecycleController.waitForOneOf(node, LifecycleState.START_OR_ERROR);
+		LifecycleController.waitForOneOf(node, LifecycleState.STOP_OR_ERROR);
+	}
 
-  public String[] getArgs() {
-    return args;
-  }
+	public String[] getArgs() {
+		return args;
+	}
 
-  public void setArgs(String[] args) {
-    this.args = args;
-  }
+	public void setArgs(String[] args) {
+		this.args = args;
+	}
 
 }

@@ -26,9 +26,7 @@ limitations under the License.
     <version>0.9.5-SNAPSHOT</version>
   </parent>
 
-  <groupId>org.apache.flume</groupId>
   <artifactId>flume-ng-sinks</artifactId>
-  <version>0.9.5-SNAPSHOT</version>
   <name>Flume NG Sinks</name>
   <packaging>pom</packaging>
 

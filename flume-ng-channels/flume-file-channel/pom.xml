@@ -8,9 +8,7 @@
     <version>0.9.5-SNAPSHOT</version>
   </parent>
 
-  <groupId>org.apache.flume</groupId>
   <artifactId>flume-file-channel</artifactId>
-  <version>0.9.5-SNAPSHOT</version>
   <name>Flume NG file-based channel</name>
 
   <dependencies>
